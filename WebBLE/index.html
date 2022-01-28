@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+<body>
+    
+</body>
+</html>
+<button id="read">Connect with BLE device</button>
+<button id="start" disabled>Start</button>
+<button id="stop" disabled>Stop</button>
+
+<script>
+    var deviceName = 'Apple Pencil'
+    var bleService = "environemental_sensing"
+    var bleCharacteristic = "uv_index"
+    var bluetoothDeviceDetected
+    var gattCharcteristic
+
+    document.querySelector('#read').addEventListener("click", function() {
+        if (isWebBluetoothEnable()) { read() }
+    })
+
+    document.querySelector('#start').addEventListener("click", function() {
+        if (isWebBluetoothEnable()) { start() }
+    })
+
+    document.querySelector('#stop').addEventListener("click", function() {
+        if (isWebBluetoothEnable()) { stop() }
+    })
+
+    //Checks if browser is bluetooth compatible
+    function isWebBLEAvailable() {
+        //If bluetooth isn't compatible
+        if (!navigator.bluetooth) {
+            console.log("Web Bluetooth is not available!")
+            return false
+        }
+
+        console.log("Web Bluetooth is available!")
+        return true
+    }
+
+    //Get devices' info
+    function getDeviceInfo() {
+        //Option object with an "acceptAllDevices" property set to true.
+        let options = {
+            //acceptAllDevices: true
+            filters: [
+                {name: deviceName}
+            ]
+        }
+
+        console.log("Requesting BLE device info...")
+
+        //Request device using the option object, then logging the devices' name
+        return navigator.bluetooth.requestDevice(options).then(device => {
+            //Capture the entire device that was returned
+            bluetoothDeviceDetected = device
+        }).catch(error => {
+            console.log("Request device error: " + error)
+        })
+    }
+
+    function read() {
+        //If device captured, resolve the promise, else retry to get the device
+        return (bluetoothDeviceDetected ? Promise.resolve() : getDeviceInfo)
+        .then(connectGATT)
+        .then(_ => {
+            console.log("Reading UV Index...")
+            return gattCharcteristic.readValue()
+        })
+        .catch(error => {
+            console.log("Waiting to start reading: " + error)
+        })
+    }
+
+    function connectGATT() {
+        if(bluetoothDeviceDetected.gatt.connected && gettCharacteristic) {
+            return Promise.resolve()
+        }
+
+        return bluetoothDeviceDetected.gatt.connected()
+        .then(server => {
+            console.log("Getting GATT Service...")
+            return server.getPrimaryService(bleService)
+        })
+        .then(service => {
+            console.log("Getting GATT Characteristic...")
+            return service.gettCharacteristic(bleCharacteristic)
+        })
+        .then(characteristic => {
+            gettCharacteristic.addEventListener("characteristicvaluechanged", handleChangedValue)
+        
+            document.querySelector("#start").disabled = false
+            document.querySelector("#stop").disabled = true
+        })
+    }
+
+    function handleChangedValue(event) {
+        let value = event.target.value.getUint8(0)
+        var now = new Date()
+        console.log("> " + now.getHours() + ":" + now.getMinutes() + ":" + now.getSeconds() + " UV Index is " + value)
+    }
+
+    function start() {
+        gattCharcteristic.startNotifications()
+        .then(_ => {
+            console.log("Start reading...")
+            document.querySelector("#start").disabled = true
+            document.querySelector("#stop").disabled = false
+        })
+        .catch(error => {
+            console.log("[Error] Start: " + error)
+        })
+    }
+
+    function stop() {
+        gattCharcteristic.stopNotifications()
+        .then(_ => {
+            console.log("Stpo reading...")
+            document.querySelector("#start").disabled = false
+            document.querySelector("#stop").disabled = true
+        })
+        .catch(error => {
+            console.log("[Error] Stop: " + error)
+        })
+    }
+
+
+
+</script>
